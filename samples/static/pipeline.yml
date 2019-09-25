@@ -2,6 +2,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Pipeline using CodePipeline and CodeBuild for continuous delivery of a single-page application to S3
 Parameters:
+  BoundaryPolicy:
+    Type: String
+    Description:  Provide the Boundary policy that will be used when the roles are created.
   SiteBucketName:
     Type: String
     Description: Name of bucket to create to host the website
@@ -74,6 +77,7 @@ Resources:
   CodeBuildRole:
     Type: AWS::IAM::Role
     Properties:
+      PermissionsBoundary: !Ref BoundaryPolicy
       AssumeRolePolicyDocument:
         Statement:
         - Effect: Allow
@@ -94,6 +98,7 @@ Resources:
   CodePipelineRole:
     Type: AWS::IAM::Role
     Properties:
+      PermissionsBoundary: !Ref BoundaryPolicy
       AssumeRolePolicyDocument:
         Statement:
         - Effect: Allow
