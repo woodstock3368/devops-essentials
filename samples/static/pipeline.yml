@@ -61,17 +61,17 @@ Metadata:
         default: Name of S3 Bucket to create for website hosting
       GitHubToken:
         default: GitHub OAuth2 Token
-      GitHubUser: 
+      GitHubUser:
         default: GitHub User/Org Name
-      GitHubRepo: 
+      GitHubRepo:
         default: GitHub Repository Name
-      GitHubBranch: 
+      GitHubBranch:
         default: GitHub Branch Name
-      BuildType: 
+      BuildType:
         default: CodeBuild type
-      BuildComputeType: 
+      BuildComputeType:
         default: CodeBuild instance type
-      BuildImage: 
+      BuildImage:
         default: CodeBuild image
 Resources:
   CodeBuildRole:
@@ -165,8 +165,8 @@ Resources:
           phases:
             post_build:
               commands:
-                - aws s3 cp --recursive --acl public-read ./samples s3://${SiteBucketName}/samples 
-                - aws s3 cp --recursive --acl public-read ./html s3://${SiteBucketName}/ 
+                - aws s3 cp --recursive --acl public-read ./samples s3://${SiteBucketName}/samples
+                - aws s3 cp --recursive --acl public-read ./html s3://${SiteBucketName}/
           artifacts:
             type: zip
             files:
@@ -187,10 +187,11 @@ Resources:
             Version: '1'
             Provider: GitHub
           OutputArtifacts:
-          - Name: SourceArtifacts 
+          - Name: SourceArtifacts
           Configuration:
             Owner: !Ref GitHubUser
             Repo: !Ref GitHubRepo
+            PollForSourceChanges: false
             Branch: !Ref GitHubBranch
             OAuthToken: !Ref GitHubToken
           RunOrder: 1
@@ -203,7 +204,7 @@ Resources:
             Version: '1'
             Provider: CodeBuild
           InputArtifacts:
-          - Name: SourceArtifacts 
+          - Name: SourceArtifacts
           OutputArtifacts:
           - Name: DeploymentArtifacts
           Configuration:
@@ -212,6 +213,21 @@ Resources:
       ArtifactStore:
         Type: S3
         Location: !Ref PipelineBucket
+  Webhook:
+    Type: AWS::CodePipeline::Webhook
+    DependsOn: Pipeline
+    Properties:
+      Authentication: GITHUB_HMAC
+      AuthenticationConfiguration:
+        SecretToken: !Ref GitHubToken
+      Filters:
+      - JsonPath: "$.ref"
+        MatchEquals: refs/heads/{Branch}
+      TargetPipeline: !Ref Pipeline
+      TargetAction: Source
+      Name: whRoskelleycj
+      TargetPipelineVersion: !GetAtt Pipeline.Version
+      RegisterWithThirdParty: 'true'
 Outputs:
   PipelineUrl:
     Value: !Sub https://console.aws.amazon.com/codepipeline/home?region=${AWS::Region}#/view/${Pipeline}
